@@ -41,12 +41,19 @@
                 <div class="flex justify-center">
                 <a 
                     class="login-button"
-                    href="{{ url('/login') }}"
+                    href="localhost:8000/login
+  ?client_id=example-client-id
+  &scope=openid%20offline_access
+  &response_type=code
+  &redirect_uri=https://localhost:3010/logout"
 
                 >
-                Login with Subrite
-                </a>
+Test
+
+            </a>
+
                 </div>
+
             </div>
         </div>
     </body>
