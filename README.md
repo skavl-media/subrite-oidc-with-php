@@ -36,7 +36,7 @@ GET /api/oidc/auth
 
 ### Example Request
 
-```
+```http
 GET http://{{subriteUrl}}/api/oidc/auth?client_id=-client-id&response_type=code&scope=openid+offline_access&redirect_uri=http%3A%2F%2Flocalhost%3A3010%2Fcallback&code_challenge=abclongcode&code_challenge_method=S256&state=deflongcode
 
 ```
@@ -66,7 +66,7 @@ Content-Type: application/x-www-form-urlencoded
 
 ### Response
 
-```
+```json
 {
   "token_type": "<string>",
   "expires_in": <integer>,
