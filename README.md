@@ -1,66 +1,118 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Subrite OIDC OAuth Integration
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This guide will help you seamlessly integrate Subrite OIDC into your application for user authorization using OAuth.
 
-## About Laravel
+You can use any popular OpenID Connect library in your preferred programming language for a seamless integration experience
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Prerequisites
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Before you begin, make sure you have the following information from Subrite's admin portal:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+-   **Client ID**
+-   **Client Secret**
+-   **Redirect URI**
 
-## Learning Laravel
+## OAuth Flow Steps
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Redirect to Subrite Login Page
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+To initiate the OAuth process, users need to be redirected to Subrite's OIDC login page.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Endpoint:**
 
-## Laravel Sponsors
+```http
+GET /api/oidc/auth
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### Request Parameters:
 
-### Premium Partners
+-   **response_type (required):** Grant to execute. Only code is currently supported.
+-   **client_id (required):** Your Client ID.
+-   **redirect_uri (required):** A successful response from this endpoint results in a redirect to this URL.
+-   **code_challenge_method (required):** S256 (Required as PKCE is enabled).
+-   **code_challenge (required):** Base64 encoded SHA256 hashed long character string.
+-   **scope (required):** openid, offline_access.
+-   **state (required):** An opaque value used for security purposes.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Example Request
 
-## Contributing
+```
+GET http://{{subriteUrl}}/api/oidc/auth?client_id=-client-id&response_type=code&scope=openid+offline_access&redirect_uri=http%3A%2F%2Flocalhost%3A3010%2Fcallback&code_challenge=abclongcode&code_challenge_method=S256&state=deflongcode
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```
 
-## Code of Conduct
+## 2. User Authentication
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+After being redirected to Subrite's OAuth login page, users will authenticate themselves.
 
-## Security Vulnerabilities
+## 3. Exchange Code for acessToken
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Upon successful authentication, users will be redirected to the specified redirect_uri with a temporary code. Use this code to obtain an access token.
 
-## License
+**Endpoint:**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```http
+POST /api/oidc/token
+Content-Type: application/x-www-form-urlencoded
+```
+
+### Request Parameters
+
+-   **grant_type (required):** authorization_code.
+-   **client_id (required):** Your Client ID.
+-   **client_secret (required):** Your Client Secret.
+-   **code (required):** The code received in the response in step 2.
+-   **code_verifier (required):** Code stored in session when generating code_challenge in step 1.
+
+### Response
+
+```
+{
+  "token_type": "<string>",
+  "expires_in": <integer>,
+  "access_token": "<string>",
+  "refresh_token": "<string>",
+  "id_token": "<string>",
+  "scope": "<string>"
+}
+```
+
+## Example token request
+
+```
+curl --location '{{subriteUrl}}/api/oidc/token' \
+--header 'Content-Type: application/x-www-form-urlencoded' \
+--header 'Accept: application/json' \
+--data-urlencode 'grant_type=authorization_code' \
+--data-urlencode 'client_id=YourClientId' \
+--data-urlencode 'client_secret=YourClientSecret' \
+--data-urlencode 'code=CodeFromStep2' \
+--data-urlencode 'code_verifier=CodeVerifierFromStep1'
+```
+
+### Using Access Token
+
+Use the obtained access token as authorization bearer token to make requests to Subrite API to access resources.
+
+### Get Refresh Token
+
+To obtain a refresh token, use the same token endpoint with `grant_type` set to `refresh_token`.
+
+### Logout
+
+When implementing logout, ensure to log the user out from Subrite and your application. Make a GET request to Subrite's logout endpoint.
+
+**Logout Endpoint:**
+
+```http
+GET /api/oidc/session/end
+```
+
+You can also tell subrite what client we are signing out from
+
+```http
+GET /api/oidc/session/end?client_id=your_client_id
+
+```
+
+After logout from subrite, you will be redirected to your `post_logout_redirect_uri`.
